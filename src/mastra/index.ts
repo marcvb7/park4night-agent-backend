@@ -1,20 +1,19 @@
 import { Mastra, Agent } from '@mastra/core';
-// CORRECCIÓ AQUÍ: Posem './' en lloc de '../' perquè la carpeta tools està al costat
-import { park4nightTool } from './tools/park4nightTool';
+// CORRECCIÓ CLAU: './' (mateixa carpeta) i afegim '.js'
+import { park4nightTool } from './tools/park4nightTool.js';
+
+// CHIVATO: Això ens dirà als logs si l'eina s'ha carregat
+console.log("🔧 DEBUG: Intentant carregar l'eina Park4Night...");
+console.log("🔧 DEBUG: Estat de l'eina:", park4nightTool ? "✅ CARREGADA" : "❌ FALLIDA");
 
 export const camperAgent = new Agent({
   name: 'camperAgent',
-  instructions: `Ets un expert assistent de viatge per a campers i autocaravanes.
+  instructions: `Ets un expert assistent de viatge.
 
-  LA TEVA REGLA D'OR:
-  NO t'inventis mai llocs. Les dades han de sortir EXCLUSIVAMENT de l'eina "park4nightTool".
-  
-  Quan l'usuari et pregunti per llocs (sigui quina sigui la ubicació):
-  1. EXECUTA SEMPRE l'eina 'park4nightTool'.
-  2. Si l'eina et torna llocs (encara que siguin d'Alemanya o França), MOSTRA'LS.
-  3. Digues: "Això és el que he trobat a la base de dades actualment:".
-  
-  Si l'eina falla o no torna res, digues honestament: "No he pogut connectar amb la base de dades."`,
+  INSTRUCCIONS IMPORTANTS:
+  1. La teva font de veritat és l'eina "park4nightTool". Fes-la servir SEMPRE que et demanin llocs.
+  2. Si l'eina torna resultats, mostra'ls tal qual (encara que siguin d'un altre país).
+  3. Si no trobes res, digues: "No he pogut connectar amb la base de dades."`,
   model: 'anthropic/claude-3-5-haiku-20241022',
   tools: {
     park4nightTool: park4nightTool
