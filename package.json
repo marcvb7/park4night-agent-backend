@@ -1,0 +1,26 @@
+{
+  "name": "park4night-agent-def",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Mastra AI Agent per consultar llocs de Park4Night",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test": "tsx src/test-agent.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mastra/core": "alpha",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.2.1",
+    "tsx": "^4.7.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.8"
+  }
+}
