@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@mastra/core": "alpha",
+    "@supabase/supabase-js": "^2.90.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^5.2.1",
