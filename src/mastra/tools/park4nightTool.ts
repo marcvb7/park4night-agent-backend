@@ -2,7 +2,7 @@ import { createTool } from "@mastra/core";
 import { z } from "zod";
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
-import { scrapePark4Night, ScrapedPlace } from '../../services/scraper.js';
+import { fetchPlacesByCity, Place } from '../../services/park4nightAPI.js';
 
 // Carregar variables d'entorn
 dotenv.config();
@@ -16,9 +16,9 @@ console.log(`🔧 Park4Night Tool Init: ${supabaseUrl ? '✅ URL OK' : '❌ NO U
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
- * Save scraped places to Supabase database
+ * Save places to Supabase database
  */
-async function savePlacesToDatabase(places: ScrapedPlace[]): Promise<void> {
+async function savePlacesToDatabase(places: Place[]): Promise<void> {
   console.log(`💾 Saving ${places.length} places to database...`);
 
   for (const place of places) {
@@ -31,7 +31,8 @@ async function savePlacesToDatabase(places: ScrapedPlace[]): Promise<void> {
             latitude: place.latitude,
             longitude: place.longitude,
             url: place.url,
-            description: place.description
+            description: place.description,
+            address: place.address
           },
           { onConflict: 'url' }
         );
@@ -72,11 +73,11 @@ function formatPlacesResponse(places: any[], location: string): string {
 }
 
 export const park4nightTool = createTool({
-  label: "Park4Night Search - Lazy Loading",
+  label: "Park4Night Search - Smart Fetch",
   schema: z.object({
     location: z.string().describe("Ubicació, paraula clau o tipus de lloc a cercar"),
   }),
-  description: "Cerca llocs per aparcar o acampar. Primer busca a la base de dades local. Si no hi ha resultats, fa scraping en temps real de Park4Night i guarda els resultats.",
+  description: "Cerca llocs per aparcar o acampar. Primer busca a la base de dades local. Si no hi ha resultats, usa geocoding i l'API de Park4Night per obtenir dades en temps real i les guarda.",
 
   executor: async ({ data }) => {
     console.log("================================================");
@@ -121,31 +122,31 @@ export const park4nightTool = createTool({
       }
 
       // ============================================
-      // STEP 2: SCRAPE & SAVE (Slow Path)
+      // STEP 2: GEOCODE & FETCH FROM API (Slow Path)
       // ============================================
-      console.log("\n🌐 STEP 2: No results in database. Starting web scrape...");
+      console.log("\n🌐 STEP 2: No results in database. Fetching from Park4Night API...");
 
-      const scrapedPlaces = await scrapePark4Night(data.location, 5);
+      const fetchedPlaces = await fetchPlacesByCity(data.location, 10);
 
-      if (scrapedPlaces.length === 0) {
-        console.log("❌ No results found from scraping either");
+      if (fetchedPlaces.length === 0) {
+        console.log("❌ No results found from Park4Night API");
         return {
           text: `No he trobat cap lloc que coincideixi amb "${data.location}". Prova amb una altra paraula clau o ubicació més específica.`
         };
       }
 
-      console.log(`✅ Scraped ${scrapedPlaces.length} places from Park4Night`);
+      console.log(`✅ Fetched ${fetchedPlaces.length} places from Park4Night API`);
 
       // Save to database immediately
-      await savePlacesToDatabase(scrapedPlaces);
+      await savePlacesToDatabase(fetchedPlaces);
 
       // ============================================
       // STEP 3: Return Fresh Data
       // ============================================
-      console.log("\n✨ SLOW PATH COMPLETE: Returning freshly scraped and saved data");
+      console.log("\n✨ SLOW PATH COMPLETE: Returning freshly fetched and saved data");
       console.log("================================================\n");
 
-      return { text: formatPlacesResponse(scrapedPlaces, data.location) };
+      return { text: formatPlacesResponse(fetchedPlaces, data.location) };
 
     } catch (err) {
       console.error("💥 UNEXPECTED ERROR:", err);
