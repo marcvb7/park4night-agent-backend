@@ -185,17 +185,12 @@ function isNewSearchQuery(message: string): boolean {
 
 // Extract keywords from message for search
 function extractKeywords(message: string): string {
-  // PRIORITY 1: Look for capitalized city names (most reliable)
-  const capitalizedMatch = message.match(/\b([A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+(?:\s+[A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+)*)\b/);
-  if (capitalizedMatch) {
-    return capitalizedMatch[1].trim();
-  }
-
-  // PRIORITY 2: Common location patterns with prepositions
+  // PRIORITY 1: Common location patterns with prepositions (most specific)
+  // These catch "llocs a Manresa" → "Manresa", "vull dormir a La Masella" → "La Masella"
   const locationPatterns = [
-    /(?:a|en|de|prop de)\s+(?:la\s+)?([a-zàèéíòóúïü]+(?:\s+[a-zàèéíòóúïü]+)?)/i,
     /llocs?\s+(?:a|en|de|prop de)\s+([a-zàèéíòóúïü\s]+)/i,
-    /(?:busco|cerca|vull)\s+.*?(?:a|en)\s+([a-zàèéíòóúïü\s]+)/i,
+    /(?:busco|cerca|vull|necessito)\s+.*?(?:a|en)\s+(?:la\s+)?([a-zàèéíòóúïü\s]+)/i,
+    /(?:a|en|de|prop de)\s+(?:la\s+)?([a-zàèéíòóúïü]+(?:\s+[a-zàèéíòóúïü]+)?)/i,
   ];
 
   for (const pattern of locationPatterns) {
@@ -209,6 +204,12 @@ function extractKeywords(message: string): string {
         return location;
       }
     }
+  }
+
+  // PRIORITY 2: Look for capitalized city names
+  const capitalizedMatch = message.match(/\b([A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+(?:\s+[A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+)*)\b/);
+  if (capitalizedMatch) {
+    return capitalizedMatch[1].trim();
   }
 
   // PRIORITY 3: Fallback - Clean and get meaningful words (avoid verbs/connectors)
@@ -227,7 +228,7 @@ function extractKeywords(message: string): string {
 // Main chat endpoint with DIRECT Supabase integration
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
-    const { message } = req.body;
+    const { message, history } = req.body;
 
     // Validate input
     if (!message || typeof message !== 'string') {
@@ -238,7 +239,23 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       return;
     }
 
+    // Validate history if provided
+    if (history !== undefined && (!Array.isArray(history) || !history.every(msg =>
+      msg && typeof msg === 'object' &&
+      typeof msg.role === 'string' &&
+      typeof msg.content === 'string'
+    ))) {
+      res.status(400).json({
+        error: 'Invalid request',
+        details: 'Field "history" must be an array of {role: string, content: string} objects'
+      });
+      return;
+    }
+
     console.log(`💬 User query: "${message}"`);
+    if (history && history.length > 0) {
+      console.log(`📚 Context: ${history.length} previous messages`);
+    }
 
     // HYBRID STRATEGY: Agent first, then smart fallback
     let agentResponse = '';
@@ -246,7 +263,20 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
     try {
       const agent = getAgent('camperAgent');
-      const result = await agent.generate(message);
+
+      // Build conversation context if history is provided
+      let prompt = message;
+      if (history && history.length > 0) {
+        // Format history as conversation context
+        const contextMessages = history.map(msg =>
+          `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+        ).join('\n\n');
+
+        prompt = `Previous conversation:\n${contextMessages}\n\nUser: ${message}`;
+        console.log(`🔄 Using conversation context with ${history.length} messages`);
+      }
+
+      const result = await agent.generate(prompt);
       agentResponse = result.text || '';
 
       // Detect if agent actually called the tool by checking if response contains place data
