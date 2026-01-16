@@ -148,39 +148,25 @@ function isNewSearchQuery(message: string): boolean {
   // Follow-up question indicators (return FALSE for these)
   // These are STRONG indicators that it's NOT a new search
   const followUpPatterns = [
-    /\b(quina|quin|quins|quines)\b/,           // Which one(s)?
-    /\b(d'aquests|d'aquestes|aquests|aquestes)\b/,  // Of these
-    /\b(el millor|la millor|més bo)\b/,        // The best
-    /\b(recomanes|recomana|recomanació)\b/,    // Recommend
-    /\b(compara|diferència)\b/,                // Compare
+    /\b(quina|quin|quins|quines)\s+(és|és el|és la|són)\b/,  // Which one is...?
+    /\b(d'aquests|d'aquestes|aquests|aquestes)\b/,            // Of these
+    /\b(el millor|la millor|més bo|millors)\b/,               // The best
+    /\b(recomanes|recomana|recomanació)\b/,                   // Recommend
+    /\b(compara|comparació|diferència)\b/,                    // Compare
+    /\b(més tranquil|més proper|amb wifi|amb serveis)\b/,     // Specific attributes
+    /^(sí|si|no|ok|d'acord|perfecte|gràcies)\b/,              // Confirmations
   ];
 
   for (const pattern of followUpPatterns) {
     if (pattern.test(lowerMsg)) {
-      return false; // It's a follow-up question
+      return false; // It's definitely a follow-up question
     }
   }
 
-  // New search indicators (return TRUE for these)
-  // EXPANDED patterns to catch more search queries
-  const searchPatterns = [
-    /\b(busco|cerca|troba|trobar|cercar)\b/,
-    /\b(llocs?|places?|àrea|càmpings?|camping)\b.*(a|de|prop|per|en)\b/,
-    /\b(vull|necessito|m'agradaria).*(lloc|dormir|aparcar|acampar|pernoctar)\b/,
-    /\b(on puc|hi ha|existeixen).*(lloc|dormir|aparcar|acampar)\b/,
-    /\bprop de\b/,
-  ];
-
-  for (const pattern of searchPatterns) {
-    if (pattern.test(lowerMsg)) {
-      return true; // It's a new search
-    }
-  }
-
-  // Default: If it contains a potential city name (capitalized word), assume it's a search
-  // This catches "Barcelona", "Manresa", "La Masella", "Girona" etc.
-  const hasCapitalizedWord = /\b[A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+/.test(message);
-  return hasCapitalizedWord;
+  // IMPORTANT: Default behavior is TRUE (assume it's a new search)
+  // This catches city names in lowercase: "lleida", "girona", "berga"
+  // Only return FALSE if it matches follow-up patterns above
+  return true;
 }
 
 // Extract keywords from message for search
