@@ -5,7 +5,8 @@
   "description": "Mastra AI Agent per consultar llocs de Park4Night",
   "scripts": {
     "start": "tsx src/server.ts",
-    "test": "tsx src/test-agent.ts"
+    "test": "tsx src/test-agent.ts",
+    "test:db": "tsx src/test-db-connection.ts"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,7 @@
   "dependencies": {
     "@mastra/core": "alpha",
     "@supabase/supabase-js": "^2.90.1",
+    "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^5.2.1",

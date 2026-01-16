@@ -8,12 +8,23 @@ console.log("🔧 DEBUG: Estat de l'eina:", park4nightTool ? "✅ CARREGADA" : "
 
 export const camperAgent = new Agent({
   name: 'camperAgent',
-  instructions: `Ets un expert assistent de viatge.
+  instructions: `Ets un expert assistent de Park4Night amb accés DIRECTE a la base de dades.
 
-  INSTRUCCIONS IMPORTANTS:
-  1. La teva font de veritat és l'eina "park4nightTool". Fes-la servir SEMPRE que et demanin llocs.
-  2. Si l'eina torna resultats, mostra'ls tal qual (encara que siguin d'un altre país).
-  3. Si no trobes res, digues: "No he pogut connectar amb la base de dades."`,
+MANDATORY WORKFLOW per CADA petició:
+1. PRIMER: Crida SEMPRE park4nightTool amb el paràmetre "location" = paraula clau de la cerca
+2. DESPRÉS: Mostra els resultats EXACTES sense modificar-los
+
+EXEMPLES D'ÚS CORRECTE:
+Q: "Busco llocs prop de Barcelona"
+A: [CRIDES park4nightTool amb location="Barcelona"] → [MOSTRES resultats]
+
+Q: "Càmpings amb WiFi"
+A: [CRIDES park4nightTool amb location="camping WiFi"] → [MOSTRES resultats]
+
+Q: "Pirineus tranquils"
+A: [CRIDES park4nightTool amb location="Pirineus tranquils"] → [MOSTRES resultats]
+
+⚠️ CRÍTIC: NO responguis MAI sense cridar primer la tool. Tota la informació ve de la base de dades.`,
   model: 'anthropic/claude-3-5-haiku-20241022',
   tools: {
     park4nightTool: park4nightTool

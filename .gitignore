@@ -4,3 +4,16 @@ dist
 .DS_Store
 tmpclaude*
 npm-debug.log
+
+# Test files
+test-*.ts
+test-*.js
+test-*.ps1
+
+# Temporary files
+nul
+*.log
+
+# Screenshots from scraping (if any)
+*-screenshot.png
+scraper-error.png
