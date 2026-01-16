@@ -146,68 +146,79 @@ function isNewSearchQuery(message: string): boolean {
   const lowerMsg = message.toLowerCase();
 
   // Follow-up question indicators (return FALSE for these)
+  // These are STRONG indicators that it's NOT a new search
   const followUpPatterns = [
-    'quina', 'quin', 'quins', 'quines',          // Which one(s)?
-    'd\'aquests', 'd\'aquestes', 'aquests', 'aquestes',  // Of these
-    'millor', 'pitjor',                          // Better/worse
-    'recomanació', 'recomanes', 'recomana',      // Recommend
-    'compara', 'diferència',                     // Compare
-    'més', 'menys',                              // More/less
-    'primer', 'segon', 'tercer',                 // First, second...
+    /\b(quina|quin|quins|quines)\b/,           // Which one(s)?
+    /\b(d'aquests|d'aquestes|aquests|aquestes)\b/,  // Of these
+    /\b(el millor|la millor|més bo)\b/,        // The best
+    /\b(recomanes|recomana|recomanació)\b/,    // Recommend
+    /\b(compara|diferència)\b/,                // Compare
   ];
 
   for (const pattern of followUpPatterns) {
-    if (lowerMsg.includes(pattern)) {
+    if (pattern.test(lowerMsg)) {
       return false; // It's a follow-up question
     }
   }
 
   // New search indicators (return TRUE for these)
+  // EXPANDED patterns to catch more search queries
   const searchPatterns = [
-    'busco', 'cerca', 'troba', 'trobar',
-    'llocs a', 'lloc a', 'places a',
-    'càmping', 'camping', 'àrea',
-    'on puc', 'hi ha',
-    'vull anar', 'necessito'
+    /\b(busco|cerca|troba|trobar|cercar)\b/,
+    /\b(llocs?|places?|àrea|càmpings?|camping)\b.*(a|de|prop|per|en)\b/,
+    /\b(vull|necessito|m'agradaria).*(lloc|dormir|aparcar|acampar|pernoctar)\b/,
+    /\b(on puc|hi ha|existeixen).*(lloc|dormir|aparcar|acampar)\b/,
+    /\bprop de\b/,
   ];
 
   for (const pattern of searchPatterns) {
-    if (lowerMsg.includes(pattern)) {
+    if (pattern.test(lowerMsg)) {
       return true; // It's a new search
     }
   }
 
   // Default: If it contains a potential city name (capitalized word), assume it's a search
-  // This catches "Barcelona", "Manresa", "Girona" etc.
+  // This catches "Barcelona", "Manresa", "La Masella", "Girona" etc.
   const hasCapitalizedWord = /\b[A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+/.test(message);
   return hasCapitalizedWord;
 }
 
 // Extract keywords from message for search
 function extractKeywords(message: string): string {
-  const lowerMsg = message.toLowerCase();
+  // PRIORITY 1: Look for capitalized city names (most reliable)
+  const capitalizedMatch = message.match(/\b([A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+(?:\s+[A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+)*)\b/);
+  if (capitalizedMatch) {
+    return capitalizedMatch[1].trim();
+  }
 
-  // Try to extract location from common patterns
+  // PRIORITY 2: Common location patterns with prepositions
   const locationPatterns = [
-    /llocs? (?:a|prop de|a prop de) ([a-zàèéíòóúïü\s]+)/i,
-    /(?:busco|cerca|troba|trobar) (?:a|prop de)? ([a-zàèéíòóúïü\s]+)/i,
-    /càmpings? (?:a|de) ([a-zàèéíòóúïü\s]+)/i,
-    /([A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+(?:\s+[A-ZÀÈÉÍÒÓÚÏÜ][a-zàèéíòóúïü]+)?)/  // Capitalized words
+    /(?:a|en|de|prop de)\s+(?:la\s+)?([a-zàèéíòóúïü]+(?:\s+[a-zàèéíòóúïü]+)?)/i,
+    /llocs?\s+(?:a|en|de|prop de)\s+([a-zàèéíòóúïü\s]+)/i,
+    /(?:busco|cerca|vull)\s+.*?(?:a|en)\s+([a-zàèéíòóúïü\s]+)/i,
   ];
 
   for (const pattern of locationPatterns) {
     const match = message.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      // Clean up the extracted location (remove trailing common words)
+      const location = match[1].trim()
+        .replace(/\s+(catalunya|espanya|pirineus)$/i, '') // Remove country/region suffixes
+        .trim();
+      if (location.length > 2) {
+        return location;
+      }
     }
   }
 
-  // Fallback: Clean and return first meaningful words
+  // PRIORITY 3: Fallback - Clean and get meaningful words (avoid verbs/connectors)
+  const stopwords = ['busco', 'cerca', 'troba', 'vull', 'necessito', 'lloc', 'llocs', 'per', 'dormir', 'aparcar', 'acampar', 'un', 'una', 'els', 'les'];
   const cleaned = message
+    .toLowerCase()
     .replace(/[^\wàèéíòóúïü\s]/gi, '')
     .split(' ')
-    .filter(word => word.length > 2 && !['busco', 'cerca', 'troba', 'vull', 'lloc', 'llocs'].includes(word.toLowerCase()))
-    .slice(0, 3)
+    .filter(word => word.length > 2 && !stopwords.includes(word))
+    .slice(0, 2)  // Only take 2 words max
     .join(' ');
 
   return cleaned || message;
